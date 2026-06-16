@@ -12,11 +12,12 @@ const calcularTotal = (monto, tasa, meses) =>
 // ── Crear un préstamo ─────────────────────────────────────────────────────────
 const crear = async ({ prestatario, monto, tasa_interes, meses }) => {
   const total_devolver = calcularTotal(monto, tasa_interes, meses);
+const fecha_prestamo = new Date().toISOString().split('T')[0]
 
   const [result] = await pool.execute(
-    `INSERT INTO prestamos (prestatario, monto, tasa_interes, meses, total_devolver)
-     VALUES (?, ?, ?, ?, ?)`,
-    [prestatario, monto, tasa_interes, meses, total_devolver]
+    `INSERT INTO prestamos (prestatario, monto, tasa_interes, meses, total_devolver, fecha_prestamo)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [prestatario, monto, tasa_interes, meses, total_devolver, fecha_prestamo]
   );
 
   return { id: result.insertId, total_devolver };
