@@ -55,6 +55,14 @@ const actualizar = async (id, { tasa_interes, meses, cuotas_por_mes, fecha_prest
   return result.affectedRows;
 };
 
+const actualizarEstado = async (id, estado) => {
+  const [result] = await pool.execute(
+    `UPDATE prestamos SET estado = ? WHERE id = ?`,
+    [estado, id]
+  );
+  return result.affectedRows;
+};
+
 const eliminar = async (id) => {
   const [result] = await pool.execute(
     `DELETE FROM prestamos WHERE id = ?`, [id]
@@ -94,6 +102,28 @@ const registrarPago = async (id, monto_pagado, nota = '') => {
   };
 };
 
+const eliminarPago = async (pagoId, prestamo_id) => {
+  const [pagos] = await pool.execute(
+    `SELECT total_cobrado FROM pagos WHERE id = ? AND prestamo_id = ?`,
+    [pagoId, prestamo_id]
+  );
+  if (!pagos[0]) return null;
+
+  const monto = parseFloat(pagos[0].total_cobrado);
+
+  await pool.execute(`DELETE FROM pagos WHERE id = ?`, [pagoId]);
+
+  await pool.execute(
+    `UPDATE prestamos SET saldo_restante = saldo_restante + ?, estado = 'pendiente' WHERE id = ?`,
+    [monto, prestamo_id]
+  );
+
+  const [rows] = await pool.execute(
+    `SELECT saldo_restante, estado FROM prestamos WHERE id = ?`, [prestamo_id]
+  );
+  return rows[0];
+};
+
 const listarPagos = async (id) => {
   const [rows] = await pool.execute(
     `SELECT id, monto_cuota, total_cobrado, nota, fecha_pago
@@ -103,12 +133,4 @@ const listarPagos = async (id) => {
   return rows;
 };
 
-const actualizarEstado = async (id, estado) => {
-  const [result] = await pool.execute(
-    `UPDATE prestamos SET estado = ? WHERE id = ?`,
-    [estado, id]
-  );
-  return result.affectedRows;
-};
-
-module.exports = { calcularTotal, crear, listarTodos, buscarPorId, actualizar, actualizarEstado, eliminar, registrarPago, listarPagos };
+module.exports = { calcularTotal, crear, listarTodos, buscarPorId, actualizar, actualizarEstado, eliminar, registrarPago, eliminarPago, listarPagos };

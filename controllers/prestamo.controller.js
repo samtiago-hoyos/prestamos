@@ -99,6 +99,17 @@ const registrarPago = async (req, res) => {
   } catch (err) { console.error('[registrarPago]', err); return res.status(500).json({ error: 'Error interno del servidor.' }); }
 };
 
+const cancelarPago = async (req, res) => {
+  try {
+    const prestamo_id = parseInt(req.params.id, 10);
+    const pago_id = parseInt(req.params.pago_id, 10);
+    if (isNaN(prestamo_id) || isNaN(pago_id)) return res.status(400).json({ error: 'ID inválido.' });
+    const result = await Prestamo.eliminarPago(pago_id, prestamo_id);
+    if (!result) return res.status(404).json({ error: 'Pago no encontrado.' });
+    res.json({ mensaje: 'Pago cancelado.', data: result });
+  } catch (err) { console.error('[cancelarPago]', err); return res.status(500).json({ error: 'Error interno del servidor.' }); }
+};
+
 const listarPagos = async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -108,4 +119,4 @@ const listarPagos = async (req, res) => {
   } catch (err) { console.error('[listarPagos]', err); return res.status(500).json({ error: 'Error interno del servidor.' }); }
 };
 
-module.exports = { crearPrestamo, listarPrestamos, obtenerPrestamo, actualizarPrestamo, actualizarEstado, eliminarPrestamo, registrarPago, listarPagos };
+module.exports = { crearPrestamo, listarPrestamos, obtenerPrestamo, actualizarPrestamo, actualizarEstado, eliminarPrestamo, registrarPago, cancelarPago, listarPagos };
