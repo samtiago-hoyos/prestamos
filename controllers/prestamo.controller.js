@@ -67,12 +67,13 @@ const registrarPago = async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
-    const { monto_pagado, nota } = req.body;
-    if (!monto_pagado || Number(monto_pagado) <= 0) return res.status(400).json({ error: '"monto_pagado" debe ser mayor a 0.' });
+    const monto_pagado = Number(req.body.monto_pagado || req.body.monto_cuota);
+    const { nota } = req.body;
+    if (!monto_pagado || monto_pagado <= 0) return res.status(400).json({ error: '"monto_pagado" debe ser mayor a 0.' });
     const prestamo = await Prestamo.buscarPorId(id);
     if (!prestamo) return res.status(404).json({ error: `Préstamo ${id} no encontrado.` });
     if (prestamo.estado === 'pagado') return res.status(400).json({ error: 'Este préstamo ya está pagado.' });
-    const resultado = await Prestamo.registrarPago(id, Number(monto_pagado), nota || '');
+    const resultado = await Prestamo.registrarPago(id, monto_pagado, nota || '');
     return res.status(201).json({ mensaje: 'Pago registrado.', data: resultado });
   } catch (err) { console.error('[registrarPago]', err); return res.status(500).json({ error: 'Error interno del servidor.' }); }
 };
