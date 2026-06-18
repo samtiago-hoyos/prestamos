@@ -1,47 +1,27 @@
 'use strict';
-
 const Prestamo = require('../models/prestamo.model');
-
 const ESTADOS_VALIDOS = ['pendiente', 'pagado', 'vencido'];
 
-// ── POST /prestamos ───────────────────────────────────────────────────────────
 const crearPrestamo = async (req, res) => {
   try {
     const { prestatario, monto, tasa_interes, meses, fecha_prestamo } = req.body;
+    if (!prestatario?.trim()) return res.status(400).json({ error: '"prestatario" es obligatorio.' });
+    if (!monto || Number(monto) <= 0) return res.status(400).json({ error: '"monto" debe ser mayor a 0.' });
+    if (tasa_interes === undefined || Number(tasa_interes) < 0) return res.status(400).json({ error: '"tasa_interes" debe ser >= 0.' });
+    if (!meses || Number(meses) <= 0) return res.status(400).json({ error: '"meses" debe ser mayor a 0.' });
 
-    if (!prestatario || typeof prestatario !== 'string' || !prestatario.trim())
-      return res.status(400).json({ error: 'El campo "prestatario" es obligatorio.' });
-    if (!monto || isNaN(monto) || Number(monto) <= 0)
-      return res.status(400).json({ error: '"monto" debe ser un número mayor a 0.' });
-    if (tasa_interes === undefined || isNaN(tasa_interes) || Number(tasa_interes) < 0)
-      return res.status(400).json({ error: '"tasa_interes" debe ser >= 0.' });
-    if (!meses || !Number.isInteger(Number(meses)) || Number(meses) <= 0)
-      return res.status(400).json({ error: '"meses" debe ser entero mayor a 0.' });
-
-    // ── Fecha: tomar exactamente la cadena YYYY-MM-DD sin conversión UTC ──
-    const fecha = fecha_prestamo
-      ? String(fecha_prestamo).slice(0, 10)   // garantiza formato YYYY-MM-DD
-      : new Date().toLocaleDateString('en-CA') // hoy en YYYY-MM-DD local
-
+    const fecha = fecha_prestamo ? String(fecha_prestamo).slice(0, 10) : new Date().toLocaleDateString('en-CA');
     const { id, total_devolver } = await Prestamo.crear({
-      prestatario:  prestatario.trim(),
-      monto:        Number(monto),
-      tasa_interes: Number(tasa_interes),
-      meses:        Number(meses),
-      fecha_prestamo: fecha,
+      prestatario: prestatario.trim(), monto: Number(monto),
+      tasa_interes: Number(tasa_interes), meses: Number(meses), fecha_prestamo: fecha,
     });
-
-    return res.status(201).json({
-      mensaje: 'Préstamo registrado correctamente.',
-      data: { id, total_devolver },
-    });
+    return res.status(201).json({ mensaje: 'Préstamo registrado.', data: { id, total_devolver } });
   } catch (err) {
     console.error('[crearPrestamo]', err);
     return res.status(500).json({ error: 'Error interno del servidor.' });
   }
 };
 
-// ── GET /prestamos ────────────────────────────────────────────────────────────
 const listarPrestamos = async (_req, res) => {
   try {
     const prestamos = await Prestamo.listarTodos();
@@ -52,15 +32,12 @@ const listarPrestamos = async (_req, res) => {
   }
 };
 
-// ── GET /prestamos/:id ────────────────────────────────────────────────────────
 const obtenerPrestamo = async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
-
     const prestamo = await Prestamo.buscarPorId(id);
-    if (!prestamo) return res.status(404).json({ error: `Préstamo con ID ${id} no encontrado.` });
-
+    if (!prestamo) return res.status(404).json({ error: `Préstamo ${id} no encontrado.` });
     return res.status(200).json({ data: prestamo });
   } catch (err) {
     console.error('[obtenerPrestamo]', err);
@@ -68,19 +45,14 @@ const obtenerPrestamo = async (req, res) => {
   }
 };
 
-// ── PATCH /prestamos/:id/estado ───────────────────────────────────────────────
 const actualizarEstado = async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
-
     const { estado } = req.body;
-    if (!estado || !ESTADOS_VALIDOS.includes(estado))
-      return res.status(400).json({ error: `"estado" debe ser: ${ESTADOS_VALIDOS.join(', ')}.` });
-
+    if (!ESTADOS_VALIDOS.includes(estado)) return res.status(400).json({ error: `Estado debe ser: ${ESTADOS_VALIDOS.join(', ')}.` });
     const afectados = await Prestamo.actualizarEstado(id, estado);
-    if (afectados === 0) return res.status(404).json({ error: `Préstamo con ID ${id} no encontrado.` });
-
+    if (!afectados) return res.status(404).json({ error: `Préstamo ${id} no encontrado.` });
     return res.status(200).json({ mensaje: `Estado actualizado a "${estado}".` });
   } catch (err) {
     console.error('[actualizarEstado]', err);
@@ -88,38 +60,29 @@ const actualizarEstado = async (req, res) => {
   }
 };
 
-// ── DELETE /prestamos/:id ─────────────────────────────────────────────────────
 const eliminarPrestamo = async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
-
     const afectados = await Prestamo.eliminar(id);
-    if (afectados === 0) return res.status(404).json({ error: `Préstamo con ID ${id} no encontrado.` });
-
-    return res.status(200).json({ mensaje: `Préstamo con ID ${id} eliminado correctamente.` });
+    if (!afectados) return res.status(404).json({ error: `Préstamo ${id} no encontrado.` });
+    return res.status(200).json({ mensaje: `Préstamo ${id} eliminado.` });
   } catch (err) {
     console.error('[eliminarPrestamo]', err);
     return res.status(500).json({ error: 'Error interno del servidor.' });
   }
 };
 
-// ── POST /prestamos/:id/pagos ─────────────────────────────────────────────────
 const registrarPago = async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
-
-    const { monto_cuota } = req.body;
-    if (!monto_cuota || isNaN(monto_cuota) || Number(monto_cuota) <= 0)
-      return res.status(400).json({ error: '"monto_cuota" debe ser mayor a 0.' });
-
+    const { monto_cuota, nota } = req.body;
+    if (!monto_cuota || Number(monto_cuota) <= 0) return res.status(400).json({ error: '"monto_cuota" debe ser mayor a 0.' });
     const prestamo = await Prestamo.buscarPorId(id);
-    if (!prestamo) return res.status(404).json({ error: `Préstamo con ID ${id} no encontrado.` });
-    if (prestamo.estado === 'pagado')
-      return res.status(400).json({ error: 'Este préstamo ya está pagado.' });
-
-    const resultado = await Prestamo.registrarPago(id, Number(monto_cuota), Number(prestamo.tasa_interes));
+    if (!prestamo) return res.status(404).json({ error: `Préstamo ${id} no encontrado.` });
+    if (prestamo.estado === 'pagado') return res.status(400).json({ error: 'Este préstamo ya está pagado.' });
+    const resultado = await Prestamo.registrarPago(id, Number(monto_cuota), nota || '');
     return res.status(201).json({ mensaje: 'Pago registrado.', data: resultado });
   } catch (err) {
     console.error('[registrarPago]', err);
@@ -127,12 +90,10 @@ const registrarPago = async (req, res) => {
   }
 };
 
-// ── GET /prestamos/:id/pagos ──────────────────────────────────────────────────
 const listarPagos = async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
-
     const pagos = await Prestamo.listarPagos(id);
     return res.status(200).json({ data: pagos });
   } catch (err) {
@@ -141,7 +102,4 @@ const listarPagos = async (req, res) => {
   }
 };
 
-module.exports = {
-  crearPrestamo, listarPrestamos, obtenerPrestamo,
-  actualizarEstado, eliminarPrestamo, registrarPago, listarPagos,
-};
+module.exports = { crearPrestamo, listarPrestamos, obtenerPrestamo, actualizarEstado, eliminarPrestamo, registrarPago, listarPagos };
