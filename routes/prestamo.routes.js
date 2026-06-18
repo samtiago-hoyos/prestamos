@@ -8,6 +8,7 @@ const router = Router();
 router.post('/',                ctrl.crearPrestamo);
 router.get('/',                 ctrl.listarPrestamos);
 router.get('/:id',              ctrl.obtenerPrestamo);
+router.put('/:id',              ctrl.actualizarPrestamo);      // ← NUEVA
 router.patch('/:id/estado',     ctrl.actualizarEstado);
 router.delete('/:id',           ctrl.eliminarPrestamo);
 router.post('/:id/pagos',       ctrl.registrarPago);

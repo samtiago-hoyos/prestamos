@@ -41,6 +41,27 @@ const obtenerPrestamo = async (req, res) => {
   } catch (err) { console.error('[obtenerPrestamo]', err); return res.status(500).json({ error: 'Error interno del servidor.' }); }
 };
 
+const actualizarPrestamo = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
+    const { tasa_interes, meses, cuotas_por_mes, fecha_prestamo, total_devolver } = req.body;
+    if (tasa_interes === undefined || Number(tasa_interes) < 0) return res.status(400).json({ error: '"tasa_interes" debe ser >= 0.' });
+    if (!meses || Number(meses) <= 0) return res.status(400).json({ error: '"meses" debe ser mayor a 0.' });
+    if (!fecha_prestamo) return res.status(400).json({ error: '"fecha_prestamo" es obligatorio.' });
+    if (!total_devolver || Number(total_devolver) <= 0) return res.status(400).json({ error: '"total_devolver" debe ser mayor a 0.' });
+    const afectados = await Prestamo.actualizar(id, {
+      tasa_interes: Number(tasa_interes),
+      meses: Number(meses),
+      cuotas_por_mes: Number(cuotas_por_mes) || 1,
+      fecha_prestamo: String(fecha_prestamo).slice(0, 10),
+      total_devolver: Number(total_devolver),
+    });
+    if (!afectados) return res.status(404).json({ error: `Préstamo ${id} no encontrado.` });
+    return res.status(200).json({ mensaje: 'Préstamo actualizado correctamente.' });
+  } catch (err) { console.error('[actualizarPrestamo]', err); return res.status(500).json({ error: 'Error interno del servidor.' }); }
+};
+
 const actualizarEstado = async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -87,4 +108,4 @@ const listarPagos = async (req, res) => {
   } catch (err) { console.error('[listarPagos]', err); return res.status(500).json({ error: 'Error interno del servidor.' }); }
 };
 
-module.exports = { crearPrestamo, listarPrestamos, obtenerPrestamo, actualizarEstado, eliminarPrestamo, registrarPago, listarPagos };
+module.exports = { crearPrestamo, listarPrestamos, obtenerPrestamo, actualizarPrestamo, actualizarEstado, eliminarPrestamo, registrarPago, listarPagos };
