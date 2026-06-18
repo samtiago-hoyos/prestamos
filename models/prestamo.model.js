@@ -4,16 +4,16 @@ const pool = require('../config/db');
 const calcularTotal = (monto, tasa, meses) =>
   parseFloat((monto + monto * tasa * meses).toFixed(2));
 
-const crear = async ({ prestatario, monto, tasa_interes, meses, fecha_prestamo }) => {
+const crear = async ({ prestatario, monto, tasa_interes, meses, cuotas_por_mes = 1, fecha_prestamo }) => {
   const total_devolver = calcularTotal(monto, tasa_interes, meses);
   const fecha = fecha_prestamo
     ? String(fecha_prestamo).slice(0, 10)
     : new Date().toLocaleDateString('en-CA');
 
   const [result] = await pool.execute(
-    `INSERT INTO prestamos (prestatario, monto, tasa_interes, meses, total_devolver, saldo_restante, fecha_prestamo)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [prestatario, monto, tasa_interes, meses, total_devolver, monto, fecha]
+    `INSERT INTO prestamos (prestatario, monto, tasa_interes, meses, cuotas_por_mes, total_devolver, saldo_restante, fecha_prestamo)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [prestatario, monto, tasa_interes, meses, cuotas_por_mes, total_devolver, total_devolver, fecha]
   );
   return { id: result.insertId, total_devolver };
 };
@@ -47,9 +47,10 @@ const actualizar = async (id, { tasa_interes, meses, cuotas_por_mes, fecha_prest
          meses          = ?,
          cuotas_por_mes = ?,
          fecha_prestamo = ?,
-         total_devolver = ?
+         total_devolver = ?,
+         saldo_restante = ?
      WHERE id = ?`,
-    [tasa_interes, meses, cuotas_por_mes, fecha, total_devolver, id]
+    [tasa_interes, meses, cuotas_por_mes, fecha, total_devolver, total_devolver, id]
   );
   return result.affectedRows;
 };
@@ -102,4 +103,12 @@ const listarPagos = async (id) => {
   return rows;
 };
 
-module.exports = { calcularTotal, crear, listarTodos, buscarPorId, actualizar, eliminar, registrarPago, listarPagos };
+const actualizarEstado = async (id, estado) => {
+  const [result] = await pool.execute(
+    `UPDATE prestamos SET estado = ? WHERE id = ?`,
+    [estado, id]
+  );
+  return result.affectedRows;
+};
+
+module.exports = { calcularTotal, crear, listarTodos, buscarPorId, actualizar, actualizarEstado, eliminar, registrarPago, listarPagos };
