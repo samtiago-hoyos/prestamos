@@ -24,6 +24,10 @@ const listarTodos = async () => {
             total_devolver, saldo_restante, estado,
             fecha_prestamo, fecha_vencimiento, created_at, updated_at
      FROM prestamos ORDER BY created_at DESC`
+     `SELECT id, prestatario, monto, tasa_interes, meses, cuotas_por_mes,
+        total_devolver, saldo_restante, estado,
+        fecha_prestamo, fecha_vencimiento, created_at, updated_at
+ FROM prestamos ORDER BY created_at DESC`
   );
   return rows;
 };
@@ -33,18 +37,29 @@ const buscarPorId = async (id) => {
     `SELECT id, prestatario, monto, tasa_interes, meses,
             total_devolver, saldo_restante, estado,
             fecha_prestamo, fecha_vencimiento, created_at, updated_at
-     FROM prestamos WHERE id = ?`,
+     FROM prestamos WHERE id = ?`,`SELECT id, prestatario, monto, tasa_interes, meses, cuotas_por_mes,
+        total_devolver, saldo_restante, estado,
+        fecha_prestamo, fecha_vencimiento, created_at, updated_at
+ FROM prestamos ORDER BY created_at DESC`
     [id]
   );
   return rows[0] || null;
 };
 
-const actualizarEstado = async (id, estado) => {
+const actualizar = async (id, { tasa_interes, meses, cuotas_por_mes, fecha_prestamo, total_devolver }) => {
+  const fecha = fecha_prestamo ? String(fecha_prestamo).slice(0, 10) : null
   const [result] = await pool.execute(
-    `UPDATE prestamos SET estado = ? WHERE id = ?`, [estado, id]
-  );
-  return result.affectedRows;
-};
+    `UPDATE prestamos
+     SET tasa_interes   = ?,
+         meses          = ?,
+         cuotas_por_mes = ?,
+         fecha_prestamo = ?,
+         total_devolver = ?
+     WHERE id = ?`,
+    [tasa_interes, meses, cuotas_por_mes, fecha, total_devolver, id]
+  )
+  return result.affectedRows
+}
 
 const eliminar = async (id) => {
   const [result] = await pool.execute(
